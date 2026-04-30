@@ -1,0 +1,286 @@
+{
+  "name": "Tugas Pertemuan 4 Implementasi AI MSDM",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -208,
+        -64
+      ],
+      "id": "a1e1742b-be59-473d-b678-b3ff718b0367",
+      "name": "Telegram Trigger",
+      "webhookId": "1c892f53-e8ec-4545-944d-927ff8375fd3",
+      "credentials": {
+        "telegramApi": {
+          "id": "0IcfM3oTUSI084RV",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8ffb021e-c20d-4aad-a531-ce054ef968c8",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "Bagaimana prosedur reimbursement?",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "42151b24-84fc-4051-9c24-eaf6465182b3",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "Prosedur pengajuan cuti tahunan",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "2f52888c-3f36-40c8-b0d2-b0785bb2f11b",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "Bagaimana aturan lembur di perusahaan?",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "669a99b7-69b6-44f8-9efa-87e25f204caa",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "Apa syarat klaim asuransi kesehatan?",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "81907cab-76b9-42ec-b46a-385e7483f18d",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "Bagaimana prosedur permintaan alat kerja baru?",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        -64
+      ],
+      "id": "8ad49654-bc65-4f72-a44d-2c4b588ebb6f",
+      "name": "Memastikan sesuai format"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\nBerikut adalah salinan teks dari gambar tersebut:\n\nAnda adalah SOP AI Agent.\n\nATURAN KERAS:\n\n- Anda WAJIB menggunakan TOOL \"Data Pertanyaan\" sebelum menjawab.\n\n- Jawaban HARUS diambil dari hasil tool.\n\nDILARANG menggunakan pengetahuan umum.\n\n- Jika data tidak ditemukan, jawab: \"Maaf, informasi tersebut tidak tersedia di SOP.\"\n\nPertanyaan pengguna:\n{{ $node[\"Telegram Trigger\"].json.message.text }}\n\nJawaban berdasarkan SOP:",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        464,
+        -80
+      ],
+      "id": "83577b01-5ca4-4334-9bfa-12bd1b8d1356",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        464,
+        128
+      ],
+      "id": "c0298228-d29a-4657-bd70-737afa22324a",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "4bmbjz4QUgTR9FgL",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "19gKJ-nei0xRUK_vWuwY16RESc7zUl6SU5_4WdWz6b0U",
+          "mode": "list",
+          "cachedResultName": "Data Pertanyaan untuk Karyawan",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/19gKJ-nei0xRUK_vWuwY16RESc7zUl6SU5_4WdWz6b0U/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/19gKJ-nei0xRUK_vWuwY16RESc7zUl6SU5_4WdWz6b0U/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        608,
+        128
+      ],
+      "id": "aeef2889-070c-423f-99f0-30e193eda4ff",
+      "name": "Daftar Pertanyaan",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "PzWdljwzNNbeSeId",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        -80
+      ],
+      "id": "4e1d3227-1422-4476-8ccd-6b8311433601",
+      "name": "True Output",
+      "webhookId": "13d13b1e-958e-47d5-b15a-965d4b717327",
+      "credentials": {
+        "telegramApi": {
+          "id": "0IcfM3oTUSI084RV",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.from.id }}",
+        "text": "=Pertanyaan yang Anda kirimkan tidak sesuai, harap gunakan pertanyaan dibawah ini:\n1. Bagaimana prosedur reimbursement?\n2. Prosedur pengajuan cuti tahunan\n3. Bagaimana aturan lembur di perusahaan?\n4. Apa syarat klaim asuransi kesehatan?\n5. Bagaimana prosedur permintaan alat kerja baru?",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        128
+      ],
+      "id": "88296942-8ac7-48e7-bd92-97e22497be23",
+      "name": "False Output",
+      "webhookId": "a14fcb32-5c2f-442a-970e-30444a80be9f",
+      "credentials": {
+        "telegramApi": {
+          "id": "0IcfM3oTUSI084RV",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Memastikan sesuai format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memastikan sesuai format": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "False Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daftar Pertanyaan": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "True Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fc74b1cc-9f35-4081-bbbc-3aab9d1f5de8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a8b2c2141b9d9053f1875c9bb69c4ce05e16181323ff09103829de55d9b5b07d"
+  },
+  "id": "rykZ99gk6dErTWdj",
+  "tags": []
+}
