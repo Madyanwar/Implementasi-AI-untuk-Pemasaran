@@ -1,0 +1,733 @@
+{
+  "name": "Pengklasifikasi & Pengarsip Dokumen Pajak Otomatis berbasis NLP.",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional Indonesian tax document classifier.\n\nClassify the document based on the MAIN document type, not the tax content inside the document.\n\nCLASSIFICATION RULES:\n\n* If the document is a Surat Pemberitahuan, return: SPT\n* If the document is a Faktur Pajak, return: FAKTUR\n* If the document is a Bukti Potong PPh Pasal 21, return: PPH21\n* If the document is a Bukti Potong PPh Pasal 23, return: PPH23\n* If the document cannot be identified, return: UNKNOWN\n\nExtract:\n\n* tax_type\n* company\n* month\n* year\n\nAnalyze this document:\n\n{{ $json.text }}\n",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -656,
+        464
+      ],
+      "id": "a791be8e-7e87-49a5-aec2-e79271cea294",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        704
+      ],
+      "id": "706f464c-7618-4326-86c7-93e0f9f0f903",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "4bmbjz4QUgTR9FgL",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"tax_type\": {\n      \"type\": \"string\"\n    },\n    \"company\": {\n      \"type\": \"string\"\n    },\n    \"month\": {\n      \"type\": \"string\"\n    },\n    \"year\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"tax_type\",\n    \"company\",\n    \"month\",\n    \"year\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -512,
+        672
+      ],
+      "id": "094355e7-dc4c-490b-8f5b-efb1bd5a53c8",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "is:unread has:attachment"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1472,
+        352
+      ],
+      "id": "2cbf637b-3a48-49f0-b92a-cb7e82b50d5c",
+      "name": "Monitor Incoming Tax Emails",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "B9XQRCjEjMkIK6Ae",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{$json.id}}",
+        "simple": false,
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -1248,
+        352
+      ],
+      "id": "66dfa130-6030-4dce-a75d-ac084b4ec806",
+      "name": "Download Tax Attachment",
+      "webhookId": "01aa1888-e2b8-47d2-8ffa-59f6572b0578",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "B9XQRCjEjMkIK6Ae",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -944,
+        464
+      ],
+      "id": "7224ebf6-d878-4f8a-8c69-89cdc2bf10e8",
+      "name": "Extract Tax Document Text"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -128,
+        368
+      ],
+      "id": "b5b69b17-ac44-4022-9df6-8079ed7d29b5",
+      "name": "Merge PDF With AI Result"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.tax_type }}",
+                    "rightValue": "PPH21",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "078cf274-a25f-4a67-abd8-6469639ff8ad"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a34fdd4e-1f87-485b-8260-9930db944f64",
+                    "leftValue": "={{ $json.output.tax_type }}",
+                    "rightValue": "PPH23",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "95d36840-fc0c-4310-badb-1482fee93a33",
+                    "leftValue": "={{ $json.output.tax_type }}",
+                    "rightValue": "PPN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "30308397-93ed-436c-aa9b-b0595d168d28",
+                    "leftValue": "={{ $json.output.tax_type }}",
+                    "rightValue": "FAKTUR",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "aff0610c-c5a5-4035-a1ce-50b71edcab39",
+                    "leftValue": "={{ $json.output.tax_type }}",
+                    "rightValue": "SPT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        144,
+        320
+      ],
+      "id": "004c659a-50fc-4a08-8984-73df738d202f",
+      "name": "Route By Tax Type"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1VVJXhe6ONZTum-QMO4M-t0WJf2w45YW-CcEyCDWTDsU",
+          "mode": "list",
+          "cachedResultName": "Tax Dokumen Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VVJXhe6ONZTum-QMO4M-t0WJf2w45YW-CcEyCDWTDsU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VVJXhe6ONZTum-QMO4M-t0WJf2w45YW-CcEyCDWTDsU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Filename": "={{ $json.output.year }}_{{ $json.output.month }}_{{ $json.output.tax_type }}_{{ $json.output.company }}.pdf",
+            "Year": "={{ $json.output.year }}",
+            "Month": "={{ $json.output.month }}",
+            "Company": "={{ $json.output.company }}",
+            "Tax Type": "={{ $json.output.tax_type }}",
+            "Date": "={{ DateTime.now().setLocale('id').toFormat('dd LLLL yyyy HH:mm') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tax Type",
+              "displayName": "Tax Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Month",
+              "displayName": "Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Year",
+              "displayName": "Year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Filename",
+              "displayName": "Filename",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        912,
+        384
+      ],
+      "id": "9d5645fa-4f5f-4e50-bba1-7adbaaa6c9e2",
+      "name": "Save Tax Document Log",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "PzWdljwzNNbeSeId",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "attachment_0",
+        "name": "={{$json.year}}_{{$json.month}}_{{$json.tax_type}}_{{$json.company.replace(/\\s+/g,'_')}}.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1VevGMskGrnxbRVFBBcsCuVkfWVPqN-nR",
+          "mode": "list",
+          "cachedResultName": "PPH 23",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1VevGMskGrnxbRVFBBcsCuVkfWVPqN-nR"
+        },
+        "options": {
+          "simplifyOutput": true
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        480,
+        192
+      ],
+      "id": "1617911f-7e91-4419-8a7b-d770d462253d",
+      "name": "PPH23",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "dhHo1U6Su9yteXbj",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "attachment_0",
+        "name": "={{$json.year}}_{{$json.month}}_{{$json.tax_type}}_{{$json.company.replace(/\\s+/g,'_')}}.pdf",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1YhtpWjXGk6U8x-kGT4evaUk5s9ER21cn",
+          "mode": "list",
+          "cachedResultName": "PPH 21",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1YhtpWjXGk6U8x-kGT4evaUk5s9ER21cn"
+        },
+        "options": {
+          "simplifyOutput": true
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        480,
+        16
+      ],
+      "id": "6718c79d-8969-4faf-9316-e7b82f1ad990",
+      "name": "Upload Tax Document PPH21",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "dhHo1U6Su9yteXbj",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "attachment_0",
+        "name": "={{$json.year}}_{{$json.month}}_{{$json.tax_type}}_{{$json.company.replace(/\\s+/g,'_')}}.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1ZpDrMLCpKSm42C-Lj4C23ccFb5M0AgPE",
+          "mode": "list",
+          "cachedResultName": "PPN",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1ZpDrMLCpKSm42C-Lj4C23ccFb5M0AgPE"
+        },
+        "options": {
+          "simplifyOutput": true
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        480,
+        368
+      ],
+      "id": "4eb01840-694a-4e40-9e8b-1cf0bc551d1c",
+      "name": "Upload Tax Document PPN",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "dhHo1U6Su9yteXbj",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "attachment_0",
+        "name": "={{ $json.output.year }}_{{ $json.output.month }}_{{ $json.output.tax_type }}_{{ $json.output.company }}.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1UjEkFX56Q39RN5vV4zQlg4f26Qg745hN",
+          "mode": "list",
+          "cachedResultName": "FAKTUR",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1UjEkFX56Q39RN5vV4zQlg4f26Qg745hN"
+        },
+        "options": {
+          "simplifyOutput": true
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        480,
+        544
+      ],
+      "id": "084a18d1-f96e-4a41-97b0-51fa2a220546",
+      "name": "Upload Tax Document FAKTUR",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "dhHo1U6Su9yteXbj",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "attachment_0",
+        "name": "={{$json.year}}_{{$json.month}}_{{$json.tax_type}}_{{$json.company.replace(/\\s+/g,'_')}}.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1iZeY8kqn2H9QrIr5NWkjDRq79aXewhOP",
+          "mode": "list",
+          "cachedResultName": "SPT",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1iZeY8kqn2H9QrIr5NWkjDRq79aXewhOP"
+        },
+        "options": {
+          "simplifyOutput": true
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        480,
+        720
+      ],
+      "id": "117b651e-ffe1-472e-bb9e-f4a269c45e6f",
+      "name": "Upload Tax Document SPT",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "dhHo1U6Su9yteXbj",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge PDF With AI Result",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monitor Incoming Tax Emails": {
+      "main": [
+        [
+          {
+            "node": "Download Tax Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Tax Attachment": {
+      "main": [
+        [
+          {
+            "node": "Extract Tax Document Text",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge PDF With AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Tax Document Text": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge PDF With AI Result": {
+      "main": [
+        [
+          {
+            "node": "Route By Tax Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route By Tax Type": {
+      "main": [
+        [
+          {
+            "node": "Upload Tax Document PPH21",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Tax Document Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PPH23",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Tax Document Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upload Tax Document PPN",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Tax Document Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upload Tax Document FAKTUR",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Tax Document Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upload Tax Document SPT",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Tax Document Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Tax Document Log": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "81d7b2fe-e5d1-43ca-8976-9adb1d1bdda7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a8b2c2141b9d9053f1875c9bb69c4ce05e16181323ff09103829de55d9b5b07d"
+  },
+  "nodeGroups": [],
+  "id": "9zQ76YMHNoYThU1S",
+  "tags": []
+}
